@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/upload", uploadRoutes);
+app.use("/api/upload-with-contact", uploadRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("API running on port " + port));

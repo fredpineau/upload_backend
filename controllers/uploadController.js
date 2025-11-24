@@ -1,6 +1,6 @@
-const supabase = require("../services/supabase");
+import supabase from "../services/supabase.js";
 
-exports.uploadFileWithContact = async (req, res) => {
+export const  uploadFileWithContact = async (req, res) => {
   try {
     const file = req.file;
     const { nom, prenom, email } = req.body;

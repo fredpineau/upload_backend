@@ -1,12 +1,9 @@
-const express = require("express");
+import express from "express";
+import upload from "../config/multer.js";
+import { uploadFile } from "../controllers/uploadController.js";
+
 const router = express.Router();
-const upload = require("../config/multer");
-const controller = require("../controllers/uploadController");
 
-router.post(
-  "/upload-with-contact",
-  upload.single("file"),
-  controller.uploadFileWithContact
-);
+router.post("/", upload.single("file"), uploadFile, controller.uploadFileWithContact);
 
-module.exports = router;
+export default router;

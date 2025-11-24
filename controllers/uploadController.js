@@ -1,26 +1,60 @@
-import supabase from "../services/supabase.js";
-import crypto from "crypto";
+const supabase = require("../services/supabase");
 
-export const uploadFile = async (req, res) => {
+exports.uploadFileWithContact = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "Aucun fichier fourni" });
+    const file = req.file;
+    const { nom, prenom, email } = req.body;
 
-    const fileExt = req.file.originalname.split(".").pop();
-    const fileName = crypto.randomUUID() + "." + fileExt;
+    if (!file) {
+      return res.status(400).json({ error: "Aucun fichier reçu" });
+    }
 
-    const { error } = await supabase.storage
+    if (!nom || !prenom || !email) {
+      return res.status(400).json({ error: "Informations contact manquantes" });
+    }
+
+    // 1. Upload dans Storage
+    const filePath = `${Date.now()}_${file.originalname}`;
+
+    const { error: uploadError } = await supabase.storage
       .from("uploads")
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: false,
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
       });
 
-    if (error) return res.status(500).json({ error: "Erreur upload", details: error });
+    if (uploadError) {
+      return res.status(400).json({ error: "Erreur upload", details: uploadError });
+    }
 
-    const { data } = supabase.storage.from("uploads").getPublicUrl(fileName);
+    // 2. URL publique
+    const { data: publicUrl } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(filePath);
 
-    res.json({ message: "Upload réussi", fileUrl: data.publicUrl, fileName });
-  } catch (e) {
-    res.status(500).json({ error: "Erreur serveur" });
+    // 3. Enregistrement du contact en BDD
+    const { data, error: insertError } = await supabase
+      .from("contacts")
+      .insert({
+        nom,
+        prenom,
+        email,
+        filename: filePath,
+        file_url: publicUrl.publicUrl
+      })
+      .select();
+
+    if (insertError) {
+      return res.status(400).json({ error: "Erreur enregistrement contact", details: insertError });
+    }
+
+    return res.json({
+      message: "Upload + contact enregistré",
+      file: publicUrl.publicUrl,
+      contact: data[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 };
